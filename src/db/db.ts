@@ -1,5 +1,5 @@
-import mongoose, { mongo } from "mongoose";
-import { join } from "path";
+import mongoose from "mongoose";
+import bcrypt from "bcrypt";
 const { Schema } = mongoose;
 
 const userSchema = new Schema({
@@ -31,6 +31,32 @@ const purchaseSchema = new Schema({
     courseId: { type: Schema.Types.ObjectId, ref: 'Course', required: true },
     purchaseDate: { type: Date, default: Date.now }
 })
+
+userSchema.pre('save', function (next) {
+    const user = this;
+    if (!user.isModified('password')) return next();
+    bcrypt.genSalt(10, (err, salt) => {
+        if (err) return next(err);
+        bcrypt.hash(user.password, salt, (err, hash) => {
+            if (err) return next(err);
+            user.password = hash;
+            next();
+        });
+    });
+});
+
+creatorSchema.pre('save', function (next) {
+    const creator = this;
+    if (!creator.isModified('password')) return next();
+    bcrypt.genSalt(10, (err, salt) => {
+        if (err) return next(err);
+        bcrypt.hash(creator.password, salt, (err, hash) => {
+            if (err) return next(err);
+            creator.password = hash;
+            next();
+        });
+    });
+});
 
 const userModel = mongoose.model('User', userSchema);
 const creatorModel = mongoose.model('Creator', creatorSchema);

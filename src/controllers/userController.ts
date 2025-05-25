@@ -1,11 +1,67 @@
-import { Request, Response } from "express";
+import { Request, Response, RequestHandler, NextFunction } from "express";
+import { userModel } from "../db/db";
+import bcrypt from "bcrypt";
+import { JWT_USER_PASSWORD } from "../config"
+import jwt from "jsonwebtoken";
 
-export const userLogin = async (req: Request, res: Response) => {
+export const userLogin = async (req: Request, res: Response): Promise<void> => {
+    const { email, username, password } = req.body;
+    if (!email && !username) {
+        res.status(400).json({ message: 'Email or username is required' });
+        return;
+    }
+    if (!password) {
+        res.status(400).json({ message: 'Password is required' });
+        return;
+    }
 
+    try {
+        const user = await userModel.findOne({ $or: [{ email }, { username }] });
+        if (!user) {
+            res.status(404).json({ message: 'Invalid username or password' });
+            return;
+        }
+        const valid = await bcrypt.compare(password, user.password);
+        if (!valid) {
+            res.status(401).json({ message: 'Invalid username or password' });
+            return;
+        }
+
+        const token = jwt.sign({ id: user._id, role: 'user' }, JWT_USER_PASSWORD);
+        res.cookie('token', token, { httpOnly: true }).status(200).json({ message: 'Login Succesful', user: { id: user._id, username: user.username, email: user.email } });
+        return;
+
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+        return;
+    }
 };
 
-export const userRegister = async (req: Request, res: Response) => {
+export const userRegister = async (req: Request, res: Response): Promise<void> => {
+    const { email, username, password } = req.body;
+    if (!email || !username || !password) {
+        res.status(400).json({ message: 'Email, username, and password are required' });
+        return;
+    }
 
+    try {
+        const existingUser = await userModel.findOne({ email: email });
+        if (existingUser) {
+            res.status(409).json({ message: 'User already exists' });
+            return;
+        }
+
+        const result = await userModel.create({ username, email, password });
+        const token = jwt.sign({ id: result._id, role: 'user' }, JWT_USER_PASSWORD);
+        res.cookie('token', token, { httpOnly: true }).status(201).json({ message: 'User registered successfully', user: { id: result._id, username: result.username, email: result.email } });
+        return;
+
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+        return;
+    }
 };
 
 export const userLogout = async (req: Request, res: Response) => {
@@ -14,11 +70,36 @@ export const userLogout = async (req: Request, res: Response) => {
 };
 
 export const getUserProfile = async (req: Request, res: Response) => {
+    const { email, id } = req.body;
+    if (!email && !id) {
+        res.status(400).json({ message: 'Email or ID is required' });
+        return;
+    }
 
+    try {
+        const user = await userModel.findOne({ $or: [{ email: email }, { _id: id }] });
+        if (!user) {
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+
+        res.status(200).json({ id: user._id, username: user.username, email: user.email, joinData: user.joinDate });
+        return;
+
+    } catch (error) {
+        console.error('Error fetching user profile:', error);
+        res.status(500).json({ message: 'Internal server error' });
+        return;
+    }
 };
 
 export const updateUserProfile = async (req: Request, res: Response) => {
-
+    const { email, username, password } = req.body;
+    if (!email && !username && !password) {
+        res.status(400).json({ message: 'At least one field (email, username, password) is required' });
+        return;
+    }
+    
 };
 
 export const deleteUserProfile = async (req: Request, res: Response) => {
