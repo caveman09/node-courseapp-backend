@@ -1,4 +1,4 @@
-import { JWT_USER_PASSWORD, JWT_ADMIN_PASSWORD } from "../config";
+import { JWT_USER_PASSWORD, JWT_CREATOR_PASSWORD } from "../config";
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 
@@ -38,7 +38,7 @@ export default function authMiddleware(req: RequestwithUser, res: Response, next
 
     if (decoded.role === 'admin') {
         try {
-            const verified = jwt.verify(token, JWT_ADMIN_PASSWORD);
+            const verified = jwt.verify(token, JWT_CREATOR_PASSWORD);
             if (!verified) {
                 res.status(401).json({ message: "Unauthorized" });
                 return;

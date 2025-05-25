@@ -4,6 +4,13 @@ import bcrypt from "bcrypt";
 import { JWT_USER_PASSWORD } from "../config"
 import jwt from "jsonwebtoken";
 
+interface RequestwithUser extends Request {
+    user?: {
+        id: string;
+        role: 'admin' | 'user';
+    };
+}
+
 export const userLogin = async (req: Request, res: Response): Promise<void> => {
     const { email, username, password } = req.body;
     if (!email && !username) {
@@ -93,17 +100,62 @@ export const getUserProfile = async (req: Request, res: Response) => {
     }
 };
 
-export const updateUserProfile = async (req: Request, res: Response) => {
+export const updateUserProfile = async (req: RequestwithUser, res: Response) => {
     const { email, username, password } = req.body;
     if (!email && !username && !password) {
         res.status(400).json({ message: 'At least one field (email, username, password) is required' });
         return;
     }
-    
+
+    try {
+        const userId = req.user?.id;
+        if (!userId) {
+            res.status(401).json({ message: 'Unauthorized' });
+            return;
+        }
+
+        let updatedData: { email?: String, username?: String, password?: String } = {};
+        if (email) updatedData.email = email;
+        if (username) updatedData.username = username;
+        if (password) updatedData.password = password;
+
+        const response = await userModel.findByIdAndUpdate(userId, updatedData, { new: true });
+        if (!response) {
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+        res.status(200).json({ message: 'Profile updated successfully', user: { id: response._id, username: response.username, email: response.email } });
+        return;
+
+    } catch (err) {
+        console.error('Error updating user profile:', err);
+        res.status(500).json({ message: 'Internal server error' });
+        return;
+    }
 };
 
-export const deleteUserProfile = async (req: Request, res: Response) => {
-    res.status(200).json({ message: 'Profile deleted successfully' });
+export const deleteUserProfile = async (req: RequestwithUser, res: Response) => {
+    const userId = req.user?.id;
+    if (!userId) {
+        res.status(401).json({ message: 'Unauthorized' });
+        return;
+    }
+
+    try {
+        const response = await userModel.findByIdAndDelete(userId);
+        if (!response) {
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+
+        res.clearCookie('token').status(200).json({ message: 'Profile deleted successfully' });
+        return;
+
+    } catch (error) {
+        console.error('Error deleting user profile:', error);
+        res.status(500).json({ message: 'Internal server error' });
+        return;
+    }
 };
 
 export const getUserCourses = async (req: Request, res: Response) => {

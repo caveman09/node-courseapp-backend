@@ -19,6 +19,7 @@ app.use(cors(
 app.use(express.json());
 app.use(cookieParser());
 app.use('/api/user', userRoutes);
+app.use('/api/creator', creatorRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hello World!');
