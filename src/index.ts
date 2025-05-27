@@ -22,7 +22,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/creator', creatorRoutes);
 
 app.get('/', (req, res) => {
-    res.send('Hello World!');
+    res.send('Welcome to NodeJS Courseapp backend!');
 });
 
 async function main() {

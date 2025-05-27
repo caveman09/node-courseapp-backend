@@ -8,7 +8,7 @@ import {
 
 const router = Router();
 
-router.get('/', authMiddleware, (req, res) => {
+router.get('/', (req, res) => {
     res.send('Welcome to the User API');
 });
 
